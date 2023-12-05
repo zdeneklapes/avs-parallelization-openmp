@@ -15,22 +15,18 @@
 #include "loop_mesh_builder.h"
 
 LoopMeshBuilder::LoopMeshBuilder(unsigned gridEdgeSize)
-    : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop")
-{
+        : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop") {
 
 }
 
-unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field)
-{
+unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
     return 0;
 }
 
-float LoopMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field)
-{
+float LoopMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
     return 0.0f;
 }
 
-void LoopMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle)
-{
+void LoopMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) {
 
 }

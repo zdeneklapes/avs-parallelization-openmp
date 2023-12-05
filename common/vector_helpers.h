@@ -21,7 +21,9 @@
 template<typename T>
 struct Vec3_t {
     Vec3_t() : x(0), y(0), z(0) {}
+
     Vec3_t(T xyz) : x(xyz), y(xyz), z(xyz) {}
+
     Vec3_t(T x, T y, T z) : x(x), y(y), z(z) {}
 
     T x, y, z;

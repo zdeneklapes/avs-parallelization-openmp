@@ -23,21 +23,13 @@ function clean() {
         "tags" \
         "slurm*.out" \
         "*.zip"; do
-        #        "db.sqlite3" \
-        #        "*.png" \
-        #        "*.log" \
-        #        "coverage.xml" \
-        #        "*.coverage" \
-        #        "coverage.lcov"; do
         if [ "$DEBUG" -eq 1 ]; then find . -type f -iname "${file}"; else find . -type f -iname "${file}" | xargs ${RM}; fi
     done
 }
 
-function build() {
+function build_local() {
     # Build project using cmake
-
     mkdir -p build
-#    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=icpc -DCMAKE_C_COMPILER=icc -Bbuild -H.
     cmake \
         -DCC="$(which gcc)" \
         -DCXX="$(which g++)" \
@@ -45,6 +37,16 @@ function build() {
         -DCPPFLAGS="-I/usr/local/opt/llvm/include" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_CXX_COMPILER_ID="GNU" \
+        -DCMAKE_CXX_FLAGS="-O0 -g" \
+        -Bbuild \
+        -S.
+    make -j -C build
+}
+
+function build_barbora() {
+    # Build project using cmake
+    mkdir -p build
+    cmake \
         -Bbuild \
         -S.
     make -j -C build
@@ -52,15 +54,21 @@ function build() {
 
 function pack() {
     # Clean and Zip project
+    # ENVIRONMENT VARIABLES:
+    #   DEBUG: 1/0 if set to 1, only print commands, do not execute them
+
+    # Check ENVIRONMENT VARIABLES
+    if [ -z "$DEBUG" ]; then DEBUG=0; fi
+
     ZIP_NAME="xlapes02.zip"
 
     CMD="zip -jr '$ZIP_NAME' \
-        MB-xlapes02.txt \
-        calculators/BatchMandelCalculator.cc \
-        calculators/BatchMandelCalculator.h \
-        calculators/LineMandelCalculator.cc \
-        calculators/LineMandelCalculator.h \
-        tmp/backups/2023-11-04_02-10/eval.png"
+        PMC-xlapes02.txt \
+        parallel_builder/*.cpp \
+        parallel_builder/*.h \
+        input_scaling_strong.png \
+        input_scaling_weak.png \
+        grid_scaling.png"
 
     if [ $DEBUG -eq 1 ]; then echo "$CMD"; else eval "$CMD"; fi
 }
@@ -68,8 +76,8 @@ function pack() {
 function test_fast() {
     # run clean
     DEBUG=0 clean
-    DEBUG=0 build
-    make -j -C build
+    DEBUG=0 build_local
+    make -j -C build_local
     for i in "ref" "line" "batch"; do
         echo "Running test $i"
         ./build/mandelbrot -c ref -s 4096 res.npz
@@ -97,38 +105,15 @@ function send_code_to_barbora() {
 
     # Create archive
     #    git archive -o ${zip_name} HEAD
-    zip -r ${zip_name} \
-        CMakeLists.txt \
-        Dockerfile \
-        MB-xlogin00.txt \
-        advisor.sl \
-        calculators/BaseMandelCalculator.cc \
-        calculators/BaseMandelCalculator.h \
-        calculators/BatchMandelCalculator.cc \
-        calculators/BatchMandelCalculator.h \
-        calculators/LineMandelCalculator.cc \
-        calculators/LineMandelCalculator.h \
-        calculators/RefMandelCalculator.cc \
-        calculators/RefMandelCalculator.h \
-        common/cnpy.cc \
-        common/cnpy.h \
-        common/cxxopts.hpp \
-        common/vector_helpers.h \
-        config/context_values.cfg \
-        config/state.cfg \
-        evaluate.sl \
-        main.cc \
-        make.sh \
-        scripts/compare.py \
-        scripts/compare.sh \
-        scripts/plot_evaluate.py \
-        scripts/visualise.py
+    files=$(git ls-files)
+    zip -r ${zip_name} ${files}
 
     # Send archive
     scp ${zip_name} 'avs_barbora:~/repos'
 
     # rm archive on local machine and on server
     rm ${zip_name}
+#    ssh avs_barbora "cd ~/repos && rm -rfd ${CURRENT_DIR_NAME} && unzip -d ${CURRENT_DIR_NAME} ${zip_name}"
     ssh avs_barbora "cd ~/repos && rm -rfd ${CURRENT_DIR_NAME} && unzip -d ${CURRENT_DIR_NAME} ${zip_name} && rm ${zip_name}"
 }
 
@@ -182,7 +167,7 @@ function usage() {
 function check_mem_leaks() {
     # Check memory leaks using valgrind
 
-    DEBUG=1 build
+    DEBUG=1 build_local
     #    valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=tmp/valgrind.out ./build/mandelbrot -c batch -s 512 tmp/res_batch.npz
     valgrind ./build/mandelbrot -c batch -s 512 tmp/res_batch.npz || true
 }

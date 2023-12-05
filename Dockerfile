@@ -26,6 +26,7 @@ RUN apt-get update \
         automake \
         valgrind \
         software-properties-common \
+        libomp-dev \
     \
        ninja-build \
        neovim \

@@ -14,17 +14,12 @@
 #include "parametric_scalar_field.h"
 
 ParametricScalarField::ParametricScalarField(const std::string &filename, float isoLevel)
-    : mIsoLevel(isoLevel)
-    , mMin(std::numeric_limits<float>::max())
-    , mMax(std::numeric_limits<float>::min())
-    , mSize(0.0f)
-    , mFilename(filename)
-{
+        : mIsoLevel(isoLevel), mMin(std::numeric_limits<float>::max()), mMax(std::numeric_limits<float>::min()),
+          mSize(0.0f), mFilename(filename) {
     loadFromFile(filename);
 }
 
-void ParametricScalarField::loadFromFile(const std::string &filename)
-{
+void ParametricScalarField::loadFromFile(const std::string &filename) {
     mFilename = filename;
     mMin = Vec3_t<float>(std::numeric_limits<float>::max());
     mMax = Vec3_t<float>(std::numeric_limits<float>::min());
@@ -33,8 +28,7 @@ void ParametricScalarField::loadFromFile(const std::string &filename)
 
     char elementType;
     Vec3_t<float> point;
-    while(fieldFile >> elementType >> point.x >> point.y >> point.z)
-    {
+    while (fieldFile >> elementType >> point.x >> point.y >> point.z) {
         mMin.x = std::min(mMin.x, point.x);
         mMin.y = std::min(mMin.y, point.y);
         mMin.z = std::min(mMin.z, point.z);
@@ -49,13 +43,11 @@ void ParametricScalarField::loadFromFile(const std::string &filename)
     build();
 }
 
-void ParametricScalarField::build()
-{
+void ParametricScalarField::build() {
     Vec3_t<float> min(mMin.x - mIsoLevel, mMin.y - mIsoLevel, mMin.z - mIsoLevel);
     Vec3_t<float> max(mMax.x + mIsoLevel, mMax.y + mIsoLevel, mMax.z + mIsoLevel);
 
-    for(unsigned i = 0; i < mPoints.size(); ++i)
-    {
+    for (unsigned i = 0; i < mPoints.size(); ++i) {
         mPoints[i].x -= min.x;
         mPoints[i].y -= min.y;
         mPoints[i].z -= min.z;

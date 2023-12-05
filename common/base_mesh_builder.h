@@ -24,8 +24,7 @@
 /**
  * @brief The BaseMeshBuilder class
  */
-class BaseMeshBuilder
-{
+class BaseMeshBuilder {
 public:
     /**
      * @brief Constructor for BaseMeshBuilder object.
@@ -44,6 +43,7 @@ public:
     void buildMesh(const ParametricScalarField &inputField, const std::string &meshFilename);
 
     bool isInBatchMode() const { return mIsInBatchMode; }
+
     void setBatchMode(bool batchMode) { mIsInBatchMode = batchMode; }
 
 protected:

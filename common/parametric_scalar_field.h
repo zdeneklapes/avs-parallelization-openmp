@@ -19,8 +19,7 @@
 /**
  * @brief The ParametricScalarField class
  */
-class ParametricScalarField
-{
+class ParametricScalarField {
 public:
     /**
      * @brief Constructor

@@ -9,16 +9,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   # using Clang
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # using GCC
-    set(CMAKE_CXX_FLAGS "-O3 -march=native -mtune=native ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-march=native -mtune=native ${CMAKE_CXX_FLAGS}")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
     # using icc
     set(CMAKE_CXX_FLAGS "-O3 -xHost -qopt-zmm-usage=high -g -qopenmp-simd ")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     # using Visual Studio C++
 endif()
-
-
-
 
 
 find_package(OpenMP REQUIRED)
