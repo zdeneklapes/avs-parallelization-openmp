@@ -1,0 +1,17 @@
+version: '3.6'
+
+services:
+  ubuntu:
+    container_name: ubuntu
+    # Here must be defined both image and build, because we use different .env files with which are the images build
+    image: zdeneklapes/ubuntu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint:
+      - "/usr/bin/fish"
+    volumes:
+      - ./:/app/ # Mount the project directory to the container
+      - ./tmp/fish/:/root/.local/share/fish/ # Mount the fish shell history, to remain files when docker container is rebuild: This will create ./tmp/fish/ folder in the project directory if it doesn't exist already
+    stdin_open: true
+    tty: true
