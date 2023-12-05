@@ -14,9 +14,10 @@
 
 #include "loop_mesh_builder.h"
 
-LoopMeshBuilder::LoopMeshBuilder(unsigned gridEdgeSize)
-        : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop") {
-
+LoopMeshBuilder::LoopMeshBuilder(
+        unsigned gridEdgeSize
+        ) : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop") {
+    
 }
 
 unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
