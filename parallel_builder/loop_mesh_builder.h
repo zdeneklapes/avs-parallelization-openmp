@@ -26,6 +26,8 @@ protected:
     void emitTriangle(const Triangle_t &triangle);
 
     const Triangle_t *getTrianglesArray() const { return nullptr; }
+
+    std::vector<Triangle_t> mTriangles; ///< Temporary array of triangles
 };
 
 #endif // LOOP_MESH_BUILDER_H
