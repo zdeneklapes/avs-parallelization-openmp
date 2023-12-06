@@ -6,7 +6,7 @@ RM="rm -rfd"
 RED='\033[0;31m'
 NC='\033[0m'
 GREEN='\033[0;32m'
-CURRENT_DIR_NAME=$(basename $(pwd))
+CURRENT_DIR_NAME="avs-parallelization-openmp"
 
 function clean() {
     # Folders
@@ -85,10 +85,51 @@ function test_fast() {
     ./build/mandelbrot -c ref -s 4096 res.npz
 }
 
+function killall_barbora() {
+    ssh zdeneklapes@login1.barbora.it4i.cz -i ~/.ssh/id_rsa_avs 'killall -u $USER'
+    ssh zdeneklapes@login2.barbora.it4i.cz -i ~/.ssh/id_rsa_avs 'killall -u $USER'
+}
+
+function slurm_sinfo() {
+    # Print info about nodes
+    sinfo --long
+    sinfo --summarize
+}
+
+function slurm_squeue() {
+    # Print info about jobs
+    squeue --me -l
+}
+
+function slurm_watch_squeue() {
+    # Watch squeue
+    watch -n 1 "squeue -l | awk 'BEGIN{sum=0; psum = 0} {if(\$5 == \"RUNNING\") sum +=\$8; if (\$5 == \"PENDING\" && \$2 == \"qcpu_exp\") psum +=1;} END {printf \"%+4s/201 nodes used at the moment\n\", sum; printf \"%+4s nodes free\n\", 201-sum; printf \"%+4s pending jobs in queue qcpu_exp\n\", psum}'"
+    #    watch -n 1 "squeue --me -l"
+}
+
+function slurm_sbatch() {
+    # Submit jobs to slurm: vtune.sl and evaluate.sl
+    # ENVIRONMENT VARIABLES:
+    #   DEBUG: 1/0 if set to 1, only print commands, do not execute them
+
+    # Check ENVIRONMENT VARIABLES
+    if [ -z "$DEBUG" ]; then DEBUG=0; fi
+
+    echo "Submitting jobs to slurm"
+    file1="$(pwd)/${CURRENT_DIR_NAME}/vtune.sl"
+    file2="$(pwd)/${CURRENT_DIR_NAME}/evaluate.sl"
+
+    for file in ${file1} ${file2}; do
+        cd "$(dirname ${file})"
+        if [ $DEBUG -eq 1 ]; then echo "sbatch ${file}"; else sbatch ${file1}; fi
+        cd -
+    done
+}
+
 function help() {
     # Print usage on stdout
     echo "Available functions:"
-    for file in "make.sh"; do
+    for file in ${BASH_SOURCE[0]}; do
         function_names=$(cat ${file} | grep -E "(\ *)function\ +.*\(\)\ *\{" | sed -E "s/\ *function\ +//" | sed -E "s/\ *\(\)\ *\{\ *//")
         for func_name in ${function_names[@]}; do
             printf "    $func_name\n"
@@ -106,6 +147,11 @@ function send_code_to_barbora() {
     # Create archive
     #    git archive -o ${zip_name} HEAD
     files=$(git ls-files)
+
+    # remove all pdf files from files var
+    files=$(echo ${files} | sed -E "s/\.pdf//g")
+
+    # zip files
     zip -r ${zip_name} ${files}
 
     # Send archive
@@ -113,7 +159,7 @@ function send_code_to_barbora() {
 
     # rm archive on local machine and on server
     rm ${zip_name}
-#    ssh avs_barbora "cd ~/repos && rm -rfd ${CURRENT_DIR_NAME} && unzip -d ${CURRENT_DIR_NAME} ${zip_name}"
+    #    ssh avs_barbora "cd ~/repos && rm -rfd ${CURRENT_DIR_NAME} && unzip -d ${CURRENT_DIR_NAME} ${zip_name}"
     ssh avs_barbora "cd ~/repos && rm -rfd ${CURRENT_DIR_NAME} && unzip -d ${CURRENT_DIR_NAME} ${zip_name} && rm ${zip_name}"
 }
 
@@ -139,10 +185,11 @@ function backup() {
             done
             rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/tmp_*" tmp/backups/${time}/build_evaluate/
             rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*.optrpt" tmp/backups/${time}/build_evaluate/
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/CMakeFiles/mandelbrot.dir/calculators/*.optrpt" tmp/backups/${time}/build_evaluate/
+            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/CMakeFiles/PMC.dir/*"
 
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_advisor/Advisor-*" tmp/backups/${time}/build_advisor/
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_advisor/CMakeFiles/mandelbrot.dir/calculators/*.optrpt" tmp/backups/${time}/build_advisor/
+            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/vtune-*" tmp/backups/${time}/build_advisor/
+            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/CMakeFiles/PMC.dir/*"
+
             for i in "csv" "out"; do
                 rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/*.${i}" tmp/backups/${time}/
             done

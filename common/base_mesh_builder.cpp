@@ -85,7 +85,8 @@ void BaseMeshBuilder::buildMesh(const ParametricScalarField &inputField, const s
     std::cout << std::endl;
 }
 
-void BaseMeshBuilder::transformCubeVertices(const Vec3_t<float> &pos, const CubeCornerVerts_t &normVerts,
+void BaseMeshBuilder::transformCubeVertices(const Vec3_t<float> &pos,
+                                            const CubeCornerVerts_t &normVerts,
                                             CubeCornerVerts_t &outMeshSpaceVerts) {
     // Translate and scale all 8 corners of the normalized cube.
     for (unsigned i = 0; i < 8; ++i) {

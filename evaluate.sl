@@ -1,10 +1,11 @@
 #!/bin/bash
 #SBATCH -p qcpu_exp
 #SBATCH -A DD-23-135
-#SBATCH -n 1 
+#SBATCH -n 1
 #SBATCH -t 0:45:00
 #SBATCH --mail-type END
 #SBATCH -J AVS-evaluate
+#SBATCH -o evaluate.out
 
 cd $SLURM_SUBMIT_DIR
 
