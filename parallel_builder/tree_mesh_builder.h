@@ -20,11 +20,26 @@ public:
 protected:
     unsigned marchCubes(const ParametricScalarField &field);
 
+    auto decomposeSpace(
+            unsigned gridSize,
+            const Vec3_t<float> &cubeOffset,
+            const ParametricScalarField &field
+    ) -> unsigned;
+
+    auto isBlockEmpty(
+            float edgeLength,
+            const Vec3_t<float> &cubeOffset,
+            const ParametricScalarField &field
+    ) -> bool;
+
     float evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field);
 
     void emitTriangle(const Triangle_t &triangle);
 
     const Triangle_t *getTrianglesArray() const { return nullptr; }
+
+    static const unsigned GRID_CUT_OFF = 1;
+    std::vector<Triangle_t> triangles;
 };
 
 #endif // TREE_MESH_BUILDER_H

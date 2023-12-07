@@ -15,6 +15,7 @@
 
 #ifndef BASE_MESH_BUILDER_H
 #define BASE_MESH_BUILDER_H
+#define DEBUG
 
 #include <array>
 

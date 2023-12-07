@@ -10,6 +10,12 @@ CURRENT_DIR_NAME="avs-parallelization-openmp"
 
 function clean() {
     # Folders
+    # ENVIRONMENT VARIABLES:
+    #   DEBUG: 1/0 if set to 1, only print commands, do not execute them
+
+    # Check ENVIRONMENT VARIABLES
+    if [ -z "$DEBUG" ]; then DEBUG=0; fi
+
     for folder in \
         "cmake-build-debug*" \
         "build_advisor" \
@@ -21,7 +27,6 @@ function clean() {
     for file in \
         "*.DS_Store" \
         "tags" \
-        "slurm*.out" \
         "*.zip"; do
         if [ "$DEBUG" -eq 1 ]; then find . -type f -iname "${file}"; else find . -type f -iname "${file}" | xargs ${RM}; fi
     done
@@ -38,6 +43,22 @@ function build_local() {
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_CXX_COMPILER_ID="GNU" \
         -DCMAKE_CXX_FLAGS="-O0 -g" \
+        -Bbuild \
+        -S.
+    make -j -C build
+}
+
+function build_local_O3() {
+    # Build project using cmake
+    mkdir -p build
+    cmake \
+        -DCC="$(which gcc)" \
+        -DCXX="$(which g++)" \
+        -DLDFLAGS="-L/usr/local/opt/llvm/lib" \
+        -DCPPFLAGS="-I/usr/local/opt/llvm/include" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_CXX_COMPILER_ID="GNU" \
+        -DCMAKE_CXX_FLAGS="-O3" \
         -Bbuild \
         -S.
     make -j -C build
@@ -168,7 +189,7 @@ function test_on_barbora() {
     # This copy code to Barbora, build it and run sbatch advisor.sl and evaluate.sl
     send_code_to_barbora
     # Run advisor and evaluate
-    ssh avs_barbora "cd ~/repos/${CURRENT_DIR_NAME} && sbatch advisor.sl; sbatch evaluate.sl"
+    ssh avs_barbora "cd ~/repos/${CURRENT_DIR_NAME} && sbatch evaluate.sl; sbatch vtune.sl"
 }
 
 function backup() {
@@ -177,26 +198,31 @@ function backup() {
     CMD="squeue --me -l -t RUNNING --noheader | wc -l"
     CMD2="squeue --me -l -t PENDING --noheader | wc -l"
     while [ 1 ]; do
-        if [ "$(ssh avs_barbora "$CMD")" == "0" ] && [ "$(ssh avs_barbora "$CMD2")" == "0" ]; then
+        running_jobs=$(ssh avs_barbora "$CMD")
+        pending_jobs=$(ssh avs_barbora "$CMD2")
+        if [ "$running_jobs" -eq 0 ] && [ "$pending_jobs" -eq 0 ]; then
             echo -e "${GREEN}All jobs finished${NC}"
             time=$(date +%Y-%m-%d_%H-%M)
-            for i in "build_evaluate" "build_advisor"; do
+            for i in "build_evaluate" "build_vtune"; do
                 mkdir -p tmp/backups/${time}/${i}
             done
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/tmp_*" tmp/backups/${time}/build_evaluate/
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*.optrpt" tmp/backups/${time}/build_evaluate/
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/CMakeFiles/PMC.dir/*"
+#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/tmp_*" tmp/backups/${time}/build_evaluate/
+#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*.optrpt" tmp/backups/${time}/build_evaluate/
+#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/CMakeFiles/PMC.dir/*"
+#
+#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/vtune-*" tmp/backups/${time}/build_vtune/
+#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/CMakeFiles/PMC.dir/*" tmp/backups/${time}/build_vtune/
 
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/vtune-*" tmp/backups/${time}/build_advisor/
-            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/CMakeFiles/PMC.dir/*"
+            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*" tmp/backups/${time}/build_evaluate/
+            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/*" tmp/backups/${time}/build_vtune/
 
             for i in "csv" "out"; do
                 rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/*.${i}" tmp/backups/${time}/
             done
             break
         else
-            echo -e "${RED}Some jobs are still running: Waiting 10s${NC}"
-            sleep 10
+            echo -e "${RED}Waiting for jobs to finish${NC} - RUNNING: $running_jobs, PENDING: $pending_jobs"
+            sleep 5
         fi
     done
 }
@@ -213,10 +239,15 @@ function usage() {
 
 function check_mem_leaks() {
     # Check memory leaks using valgrind
+    # ENVIRONMENT VARIABLES:
+    #   DEBUG: 1/0 if set to 1, only print commands, do not execute them
 
-    DEBUG=1 build_local
+    # Check ENVIRONMENT VARIABLES
+    if [ -z "$DEBUG" ]; then DEBUG=0; fi
+
+    build_local
     #    valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=tmp/valgrind.out ./build/mandelbrot -c batch -s 512 tmp/res_batch.npz
-    valgrind ./build/mandelbrot -c batch -s 512 tmp/res_batch.npz || true
+    valgrind ./build/PMC --level 0.15 --grid 64 --builder loop --threads 1 data/bun_zipper_res1.pts loop.obj
 }
 
 function die() {

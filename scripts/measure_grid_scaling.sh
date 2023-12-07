@@ -13,6 +13,6 @@ echo "BUILDER_NAME;INPUT_FILE;OUTPUT_FILE;GRID_SIZE;ISO_LEVEL;FIELD_ELEMENTS;NUM
 
 for((i=0; i<${#SOLVERS[@]}; i++)); do
     for ((j=0; j<${#GRID_DIMS[@]}; j++)); do
-        ./PMC $INPUT_FILE -l 0.15 -g ${GRID_DIMS[j]} -b ${SOLVERS[i]} -t $NUM_THREADS --batch >> $OUTPUT_FILE
+        ./build/PMC $INPUT_FILE -l 0.15 -g ${GRID_DIMS[j]} -b ${SOLVERS[i]} -t $NUM_THREADS --batch >> $OUTPUT_FILE
     done
 done

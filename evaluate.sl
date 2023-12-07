@@ -5,7 +5,7 @@
 #SBATCH -t 0:45:00
 #SBATCH --mail-type END
 #SBATCH -J AVS-evaluate
-#SBATCH -o evaluate.out
+#SBATCH -o build_evaluate/slurm-%j.out
 
 cd $SLURM_SUBMIT_DIR
 

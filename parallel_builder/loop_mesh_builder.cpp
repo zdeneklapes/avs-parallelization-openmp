@@ -16,7 +16,7 @@
 
 LoopMeshBuilder::LoopMeshBuilder(
         unsigned gridEdgeSize
-        ) : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop") {
+) : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop") {
 
 }
 

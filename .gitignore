@@ -4,9 +4,10 @@ venv/
 .vscode/
 .git/
 build/
-cmake-build-debug/
-cmake-build-debug-docker-ubuntu/
+cmake-build-*/
 *.zip
 *.pdf
+*.out
+*.obj
 !zadani.pdf
 .DS_Store
