@@ -25,7 +25,7 @@ protected:
 
     void emitTriangle(const Triangle_t &triangle);
 
-    const Triangle_t *getTrianglesArray() const { return nullptr; }
+    const Triangle_t *getTrianglesArray() const { return mTriangles.data(); }
 
     std::vector<Triangle_t> mTriangles; ///< Temporary array of triangles
 };

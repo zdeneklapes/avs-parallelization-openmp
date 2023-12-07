@@ -29,9 +29,11 @@ unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
     // 2. Loop over each coordinate in the 3D grid.
     for (size_t i = 0; i < totalCubesCount; ++i) {
         // 3. Compute 3D position in the grid.
-        Vec3_t<float> cubeOffset(i % mGridSize,
-                                 (i / mGridSize) % mGridSize,
-                                 i / (mGridSize * mGridSize));
+        Vec3_t<float> cubeOffset(
+                i % mGridSize, // x
+                (i / mGridSize) % mGridSize, // y
+                i / (mGridSize * mGridSize) // z
+        );
 
         // 4. Evaluate "Marching Cube" at given position in the grid and
         //    store the number of triangles generated.
@@ -42,7 +44,8 @@ unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
     return totalTriangles;
 }
 
-float LoopMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
+float LoopMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos,
+                                       const ParametricScalarField &field) {
     // NOTE: This method is called from "buildCube(...)"!
 
     // 1. Store pointer to and number of 3D points in the field

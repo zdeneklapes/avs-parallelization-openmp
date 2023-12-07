@@ -96,8 +96,10 @@ void BaseMeshBuilder::transformCubeVertices(const Vec3_t<float> &pos,
     }
 }
 
-void BaseMeshBuilder::interpolateVertex(const Vec3_t<float> &v0, float l0,
-                                        const Vec3_t<float> &v1, float l1, Vec3_t<float> &out) {
+void BaseMeshBuilder::interpolateVertex(const Vec3_t<float> &v0,
+                                        float l0,
+                                        const Vec3_t<float> &v1,
+                                        float l1, Vec3_t<float> &out) {
     // Linear interpolation coefficient in (0, 1) range generated from required
     // isosurface value and field values at endpoints (l0, l1) of the edges.
     const float interpCoeff = (mIsoLevel - l0) / (l1 - l0);
@@ -117,8 +119,9 @@ unsigned BaseMeshBuilder::buildCube(const Vec3_t<float> &position, const Paramet
     //    variant of "marching cube" by checking which of the corners are above/below
     //    the isosurface.
     unsigned cubeIndex = 0;
+    constexpr unsigned CUBE_CORNERS = 8;
     std::array<float, 8> cubeCornerValues;
-    for (unsigned i = 0; i < 8; ++i) {
+    for (unsigned i = 0; i < CUBE_CORNERS; ++i) {
         cubeCornerValues[i] = evaluateFieldAt(cubeCorners[i], field);
         cubeIndex |= unsigned(cubeCornerValues[i] < mIsoLevel) << i;
     }
@@ -136,8 +139,13 @@ unsigned BaseMeshBuilder::buildCube(const Vec3_t<float> &position, const Paramet
         const unsigned v0Idx = i % 8;
         const unsigned v1Idx = sc_vertexAdjIds[i];
 
-        interpolateVertex(cubeCorners[v0Idx], cubeCornerValues[v0Idx],
-                          cubeCorners[v1Idx], cubeCornerValues[v1Idx], edgeVertices[i]);
+        interpolateVertex(
+                cubeCorners[v0Idx],
+                cubeCornerValues[v0Idx],
+                cubeCorners[v1Idx],
+                cubeCornerValues[v1Idx],
+                edgeVertices[i]
+        );
     }
 
     unsigned emitedTriangles = 0;

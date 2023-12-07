@@ -247,7 +247,7 @@ function check_mem_leaks() {
 
     build_local
     #    valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=tmp/valgrind.out ./build/mandelbrot -c batch -s 512 tmp/res_batch.npz
-    valgrind ./build/PMC --level 0.15 --grid 64 --builder loop --threads 1 data/bun_zipper_res1.pts loop.obj
+    valgrind ./build/PMC --level 0.15 --grid 8 --builder loop --threads 1 data/bun_zipper_res1.pts loop.obj
 }
 
 function die() {

@@ -6,7 +6,7 @@
 #SBATCH -t 0:10:00
 #SBATCH --mail-type END
 #SBATCH -J AVS-vtune
-#SBATCH -o build_vtune/slurm-%j.out
+#SBATCH -o vtune.out
 
 cd $SLURM_SUBMIT_DIR
 

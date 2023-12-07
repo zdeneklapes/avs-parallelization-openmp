@@ -16,9 +16,7 @@
 #include "ref_mesh_builder.h"
 
 RefMeshBuilder::RefMeshBuilder(unsigned gridEdgeSize)
-        : BaseMeshBuilder(gridEdgeSize, "Reference") {
-
-}
+        : BaseMeshBuilder(gridEdgeSize, "Reference") {}
 
 unsigned RefMeshBuilder::marchCubes(const ParametricScalarField &field) {
     // 1. Compute total number of cubes in the grid.
