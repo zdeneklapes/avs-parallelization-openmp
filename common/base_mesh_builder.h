@@ -15,7 +15,8 @@
 
 #ifndef BASE_MESH_BUILDER_H
 #define BASE_MESH_BUILDER_H
-#define DEBUG
+
+//#define DEBUG // TODO: remove this line before submission
 
 #include <array>
 

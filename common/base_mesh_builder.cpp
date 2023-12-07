@@ -99,7 +99,8 @@ void BaseMeshBuilder::transformCubeVertices(const Vec3_t<float> &pos,
 void BaseMeshBuilder::interpolateVertex(const Vec3_t<float> &v0,
                                         float l0,
                                         const Vec3_t<float> &v1,
-                                        float l1, Vec3_t<float> &out) {
+                                        float l1,
+                                        Vec3_t<float> &out) {
     // Linear interpolation coefficient in (0, 1) range generated from required
     // isosurface value and field values at endpoints (l0, l1) of the edges.
     const float interpCoeff = (mIsoLevel - l0) / (l1 - l0);
@@ -204,13 +205,13 @@ const unsigned BaseMeshBuilder::sc_vertexAdjIds[12] = {
 
 const BaseMeshBuilder::CubeCornerVerts_t BaseMeshBuilder::sc_vertexNormPos = {
         Vec3_t<float>(0.0f, 0.0f, 0.0f),
-        Vec3_t<float>(1.0f, 0.0f, 0.0f),
-        Vec3_t<float>(1.0f, 1.0f, 0.0f),
-        Vec3_t<float>(0.0f, 1.0f, 0.0f),
         Vec3_t<float>(0.0f, 0.0f, 1.0f),
+        Vec3_t<float>(0.0f, 1.0f, 0.0f),
+        Vec3_t<float>(0.0f, 1.0f, 1.0f),
+        Vec3_t<float>(1.0f, 0.0f, 0.0f),
         Vec3_t<float>(1.0f, 0.0f, 1.0f),
+        Vec3_t<float>(1.0f, 1.0f, 0.0f),
         Vec3_t<float>(1.0f, 1.0f, 1.0f),
-        Vec3_t<float>(0.0f, 1.0f, 1.0f)
 };
 
 const int BaseMeshBuilder::sc_triIndexTable[256][16] = {

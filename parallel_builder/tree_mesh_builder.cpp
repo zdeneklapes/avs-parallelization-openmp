@@ -9,7 +9,7 @@
  **/
 
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <limits>
 
 #include "tree_mesh_builder.h"
@@ -24,62 +24,51 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field) {
     // this class. This method will call itself to process the children.
     // It is also strongly suggested to first implement Octree as sequential
     // code and only when that works add OpenMP tasks to achieve parallelism.
-
-    unsigned trianglesCount = 0;
+    unsigned int totalTriangles = 0;
 #ifndef DEBUG
-#pragma omp parallel default(none) shared(trianglesCount, field)
+#pragma omp parallel default(none) shared(totalTriangles, field)
 #pragma omp single nowait
 #endif
-    trianglesCount = decomposeSpace(mGridSize, Vec3_t<float>(), field);
-
-    return trianglesCount;
+    totalTriangles = decomposeCube(Vec3_t<float>(), mGridSize, field);
+    return totalTriangles;
 }
 
-auto TreeMeshBuilder::decomposeSpace(
-        const unsigned gridSize,
-        const Vec3_t<float> &cubeOffset,
-        const ParametricScalarField &field
-) -> unsigned {
-    const auto edgeLength = float(gridSize);
-    if (isBlockEmpty(edgeLength, cubeOffset, field)) {
-        return 0;
-    }
+auto TreeMeshBuilder::decomposeCube(const Vec3_t<float> &cubeOffset,
+                                    const unsigned int gridSize,
+                                    const ParametricScalarField &field) -> unsigned int {
+    const auto edgeLen = float(gridSize);
 
-    if (gridSize <= GRID_CUT_OFF) {
-        return buildCube(cubeOffset, field);
-    }
+    if (isSurfaceInBlock(edgeLen, cubeOffset, field)) { return 0; }
+    if (gridSize <= GRID_CUT_OFF) { return buildCube(cubeOffset, field); }
 
-    unsigned totalTrianglesCount = 0;
-    const unsigned newGridSize = gridSize / 2;
-    const auto newEdgeLength = float(newGridSize);
+    unsigned int totalTriangles = 0;
+    const unsigned int nextGridSize = gridSize / 2;
 
-    for (const Vec3_t<float> vertexNormPos: sc_vertexNormPos) {
+    for (unsigned int i = 0; i < 8; ++i) {
 #ifndef DEBUG
-#pragma omp task default(none) firstprivate(vertexNormPos) shared(cubeOffset, newEdgeLength, newGridSize, field, totalTrianglesCount)
+#pragma omp task default(none) firstprivate(i) shared(cubeOffset, nextGridSize, field, totalTriangles)
 #endif
         {
-            const Vec3_t<float> newCubeOffset(
-                    cubeOffset.x + vertexNormPos.x * newEdgeLength,
-                    cubeOffset.y + vertexNormPos.y * newEdgeLength,
-                    cubeOffset.z + vertexNormPos.z * newEdgeLength
+            const Vec3_t<float> nextCubeOffset(
+                    cubeOffset.x + sc_vertexNormPos[i].x * float(nextGridSize),
+                    cubeOffset.y + sc_vertexNormPos[i].y * float(nextGridSize),
+                    cubeOffset.z + sc_vertexNormPos[i].z * float(nextGridSize)
             );
-            const unsigned trianglesCount =
-                    decomposeSpace(newGridSize, newCubeOffset, field);
-
+            const unsigned int trianglesCount = decomposeCube(nextCubeOffset, nextGridSize, field);
 #ifndef DEBUG
 #pragma omp atomic update
 #endif
-            totalTrianglesCount += trianglesCount;
+            totalTriangles += trianglesCount;
         }
     }
 
-#ifdef DEBUG
+#ifndef DEBUG
 #pragma omp taskwait
 #endif
-    return totalTrianglesCount;
+    return totalTriangles;
 }
 
-auto TreeMeshBuilder::isBlockEmpty(
+auto TreeMeshBuilder::isSurfaceInBlock(
         const float edgeLength,
         const Vec3_t<float> &cubeOffset,
         const ParametricScalarField &field
@@ -91,28 +80,44 @@ auto TreeMeshBuilder::isBlockEmpty(
             cubeOffset.y * mGridResolution + halfEdgeLength,
             cubeOffset.z * mGridResolution + halfEdgeLength
     );
-    static const float expr = sqrtf(3.F) / 2.F;
-
-    return evaluateFieldAt(midPoint, field) > mIsoLevel + expr * resEdgeLength;
+    auto block = evaluateFieldAt(midPoint, field);
+    auto circle = mIsoLevel + sqrtf(3.F) / 2.F * resEdgeLength;
+    bool isBlockEmpty = block > circle;
+    return isBlockEmpty;
 }
 
 
 float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
-    float minDistanceSquared = std::numeric_limits<float>::max();
+    // NOTE: This method is called from "buildCube(...)"!
 
-    for (const Vec3_t<float> point: field.getPoints()) {
-        const float distanceSquared = (pos.x - point.x) * (pos.x - point.x)
-                                      + (pos.y - point.y) * (pos.y - point.y)
-                                      + (pos.z - point.z) * (pos.z - point.z);
-        minDistanceSquared = std::min(minDistanceSquared, distanceSquared);
+    // 1. Store pointer to and number of 3D points in the field
+    //    (to avoid "data()" and "size()" call in the loop).
+    const Vec3_t<float> *pPoints = field.getPoints().data();
+    const auto count = unsigned(field.getPoints().size());
+
+    float value = std::numeric_limits<float>::max();
+
+    // 2. Find minimum square distance from points "pos" to any point in the
+    //    field.
+    for (unsigned i = 0; i < count; ++i) {
+        float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
+        distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);
+        distanceSquared += (pos.z - pPoints[i].z) * (pos.z - pPoints[i].z);
+
+        // Comparing squares instead of real distance to avoid unnecessary
+        // "sqrt"s in the loop.
+        value = std::min(value, distanceSquared);
     }
 
-    return sqrtf(minDistanceSquared);
+    // 3. Finally take square root of the minimal square distance to get the real distance
+    return sqrt(value);
 }
 
 void TreeMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) {
-#ifndef DEBUG
-#pragma omp critical(tree_emitTriangle)
-#endif
-    triangles.push_back(triangle);
+    // NOTE: This method is called from "buildCube(...)"!
+
+    // Store generated triangle into vector (array) of generated triangles.
+    // The pointer to data in this array is return by "getTrianglesArray(...)" call
+    // after "marchCubes(...)" call ends.
+    mTriangles.push_back(triangle);
 }
