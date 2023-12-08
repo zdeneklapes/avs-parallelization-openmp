@@ -1,6 +1,6 @@
 Architektury Výpočetních Systémů (AVS 2023)
 Projekt č. 2 (PMC)
-Login: xlogin00
+Login: xlapes02
 
 Úloha 1: Paralelizace původního řešení
 ===============================================================================
