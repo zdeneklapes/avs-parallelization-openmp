@@ -203,7 +203,7 @@ function backup() {
         if [ "$running_jobs" -eq 0 ] && [ "$pending_jobs" -eq 0 ]; then
             echo -e "${GREEN}All jobs finished${NC}"
             time=$(date +%Y-%m-%d_%H-%M)
-            for i in "build_evaluate" "build_vtune"; do
+            for i in "build_evaluate" "build_vtune" "build"; do
                 mkdir -p tmp/backups/${time}/${i}
             done
 #            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/tmp_*" tmp/backups/${time}/build_evaluate/
@@ -215,13 +215,14 @@ function backup() {
 
             rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*" tmp/backups/${time}/build_evaluate/
             rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/*" tmp/backups/${time}/build_vtune/
+            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build/*" tmp/backups/${time}/build/
 
             for i in "csv" "out"; do
                 rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/*.${i}" tmp/backups/${time}/
             done
             break
         else
-            echo -e "${RED}Waiting for jobs to finish${NC} - RUNNING: $running_jobs, PENDING: $pending_jobs"
+            echo -e "${RED}Waiting (5 seconds) for jobs to finish${NC} - RUNNING: $running_jobs, PENDING: $pending_jobs"
             sleep 5
         fi
     done
@@ -248,6 +249,17 @@ function check_mem_leaks() {
     build_local
     #    valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=tmp/valgrind.out ./build/mandelbrot -c batch -s 512 tmp/res_batch.npz
     valgrind ./build/PMC --level 0.15 --grid 8 --builder loop --threads 1 data/bun_zipper_res1.pts loop.obj
+}
+
+function t1() {
+    build_local_O3
+    GRID=32
+    ./build/PMC --level 0.15 --grid ${GRID} --builder ref --threads 0 data/bun_zipper_res1.pts tmp/ref.obj
+    ./build/PMC --level 0.15 --grid ${GRID} --builder loop --threads 0 data/bun_zipper_res1.pts tmp/loop.obj
+    ./build/PMC --level 0.15 --grid ${GRID} --builder tree --threads 0 data/bun_zipper_res1.pts tmp/tree.obj
+    python3 ./scripts/check_output.py tmp/ref.obj tmp/tree.obj
+    python3 ./scripts/check_output.py tmp/ref.obj tmp/loop.obj
+    python3 ./scripts/check_output.py tmp/loop.obj tmp/tree.obj
 }
 
 function die() {

@@ -17,6 +17,6 @@ else
 fi
 
 echo "Creating scaling plots"
-python3 $SCRIPT_ROOT_PATH/generate_plots.py input_scaling_out.csv $SCRIPT_ROOT_PATH/../input_scaling_strong.png input_strong
-python3 $SCRIPT_ROOT_PATH/generate_plots.py input_scaling_out.csv $SCRIPT_ROOT_PATH/../input_scaling_weak.png input_weak
-python3 $SCRIPT_ROOT_PATH/generate_plots.py grid_scaling_out.csv $SCRIPT_ROOT_PATH/../grid_scaling.png grid_scaling
+python3 $SCRIPT_ROOT_PATH/generate_plots.py input_scaling_out.csv ./input_scaling_strong.png input_strong
+python3 $SCRIPT_ROOT_PATH/generate_plots.py input_scaling_out.csv ./input_scaling_weak.png input_weak
+python3 $SCRIPT_ROOT_PATH/generate_plots.py grid_scaling_out.csv ./grid_scaling.png grid_scaling

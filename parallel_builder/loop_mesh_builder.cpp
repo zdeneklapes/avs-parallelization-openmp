@@ -14,6 +14,9 @@
 
 #include "loop_mesh_builder.h"
 
+#define SCHEDULE_TYPE dynamic
+#define CHUNK_SIZE 32
+
 LoopMeshBuilder::LoopMeshBuilder(
         unsigned gridEdgeSize
 ) : BaseMeshBuilder(gridEdgeSize, "OpenMP Loop") {
@@ -27,23 +30,26 @@ unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
     unsigned totalTriangles = 0;
 
     // 2. Loop over each coordinate in the 3D grid.
-    #ifndef DEBUG
-    #pragma omp parallel for shared(totalTriangles,field) reduction(+:totalTriangles)
-    #endif
+#ifndef DEBUG
+#pragma omp parallel default(none) reduction(+:totalTriangles) shared(totalCubesCount, field)
+    {
+#pragma omp for schedule(SCHEDULE_TYPE, CHUNK_SIZE)
+#endif
+        for (size_t i = 0; i < totalCubesCount; ++i) {
+            // 3. Compute 3D position in the grid.
+            Vec3_t<float> cubeOffset(
+                    i % mGridSize, // x
+                    (i / mGridSize) % mGridSize, // y
+                    i / (mGridSize * mGridSize) // z
+            );
 
-    for (size_t i = 0; i < totalCubesCount; ++i) {
-        // 3. Compute 3D position in the grid.
-        Vec3_t<float> cubeOffset(
-                i % mGridSize, // x
-                (i / mGridSize) % mGridSize, // y
-                i / (mGridSize * mGridSize) // z
-        );
-
-        // 4. Evaluate "Marching Cube" at given position in the grid and
-        //    store the number of triangles generated.
-        totalTriangles += buildCube(cubeOffset, field);
+            // 4. Evaluate "Marching Cube" at given position in the grid and
+            //    store the number of triangles generated.
+            totalTriangles += buildCube(cubeOffset, field);
+        }
+#ifndef DEBUG
     }
-
+#endif
     // 5. Return total number of triangles generated.
     return totalTriangles;
 }
@@ -61,15 +67,23 @@ float LoopMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos,
 
     // 2. Find minimum square distance from points "pos" to any point in the
     //    field.
-    for (unsigned i = 0; i < count; ++i) {
-        float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
-        distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);
-        distanceSquared += (pos.z - pPoints[i].z) * (pos.z - pPoints[i].z);
+#ifndef DEBUG
+//#pragma omp parallel default(none) shared(pPoints, count, pos) reduction(min:value)
+    {
+//#pragma omp for schedule(SCHEDULE_TYPE, CHUNK_SIZE)
+#endif
+        for (unsigned i = 0; i < count; ++i) {
+            float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
+            distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);
+            distanceSquared += (pos.z - pPoints[i].z) * (pos.z - pPoints[i].z);
 
-        // Comparing squares instead of real distance to avoid unnecessary
-        // "sqrt"s in the loop.
-        value = std::min(value, distanceSquared);
+            // Comparing squares instead of real distance to avoid unnecessary
+            // "sqrt"s in the loop.
+            value = std::min(value, distanceSquared);
+        }
+#ifndef DEBUG
     }
+#endif
 
     // 3. Finally take square root of the minimal square distance to get the real distance
     return sqrt(value);
@@ -81,5 +95,11 @@ void LoopMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) 
     // Store generated triangle into vector (array) of generated triangles.
     // The pointer to data in this array is return by "getTrianglesArray(...)" call
     // after "marchCubes(...)" call ends.
-    mTriangles.push_back(triangle);
+
+#ifndef DEBUG
+#pragma omp critical(triangle)
+#endif
+    {
+        mTriangles.push_back(triangle);
+    }
 }

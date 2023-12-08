@@ -20,6 +20,12 @@ public:
 protected:
     unsigned marchCubes(const ParametricScalarField &field);
 
+    float evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field);
+
+    void emitTriangle(const Triangle_t &triangle);
+
+    const Triangle_t *getTrianglesArray() const { return mTriangles.data(); }
+
     auto decomposeCube(const Vec3_t<float> &cubeOffset, unsigned int gridSize,
                        const ParametricScalarField &field) -> unsigned int;
 
@@ -29,11 +35,6 @@ protected:
             const ParametricScalarField &field
     ) -> bool;
 
-    float evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field);
-
-    void emitTriangle(const Triangle_t &triangle);
-
-    const Triangle_t *getTrianglesArray() const { return mTriangles.data(); }
 
     static const unsigned GRID_CUT_OFF = 1;
     std::vector<Triangle_t> mTriangles; ///< Temporary array of triangles

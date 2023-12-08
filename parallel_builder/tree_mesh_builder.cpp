@@ -27,11 +27,62 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field) {
     unsigned int totalTriangles = 0;
 #ifndef DEBUG
 #pragma omp parallel default(none) shared(totalTriangles, field)
-#pragma omp single nowait
+//#pragma omp parallel default(none) shared(totalTriangles, field) num_threads(8)
+    {
+#pragma omp master
+//#pragma omp single nowait
+        {
 #endif
-    totalTriangles = decomposeCube(Vec3_t<float>(), mGridSize, field);
+            totalTriangles = decomposeCube(Vec3_t<float>(), mGridSize, field);
+#ifndef DEBUG
+        }
+    }
+#endif
+
+
     return totalTriangles;
 }
+
+float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
+    // NOTE: This method is called from "buildCube(...)"!
+
+    // 1. Store pointer to and number of 3D points in the field
+    //    (to avoid "data()" and "size()" call in the loop).
+    const Vec3_t<float> *pPoints = field.getPoints().data();
+    const auto count = unsigned(field.getPoints().size());
+
+    float value = std::numeric_limits<float>::max();
+
+    // 2. Find minimum square distance from points "pos" to any point in the
+    //    field.
+    for (unsigned i = 0; i < count; ++i) {
+        float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
+        distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);
+        distanceSquared += (pos.z - pPoints[i].z) * (pos.z - pPoints[i].z);
+
+        // Comparing squares instead of real distance to avoid unnecessary
+        // "sqrt"s in the loop.
+        value = std::min(value, distanceSquared);
+    }
+
+    // 3. Finally take square root of the minimal square distance to get the real distance
+    return sqrt(value);
+}
+
+void TreeMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) {
+    // NOTE: This method is called from "buildCube(...)"!
+
+    // Store generated triangle into vector (array) of generated triangles.
+    // The pointer to data in this array is return by "getTrianglesArray(...)" call
+    // after "marchCubes(...)" call ends.
+#ifndef DEBUG
+#pragma omp critical(triangle)
+#endif
+    {
+        mTriangles.push_back(triangle);
+    }
+}
+
 
 auto TreeMeshBuilder::decomposeCube(const Vec3_t<float> &cubeOffset,
                                     const unsigned int gridSize,
@@ -44,6 +95,13 @@ auto TreeMeshBuilder::decomposeCube(const Vec3_t<float> &cubeOffset,
     unsigned int totalTriangles = 0;
     const unsigned int nextGridSize = gridSize / 2;
 
+//#ifndef DEBUG
+//#pragma omp for
+//#endif
+//#ifndef DEBUG
+//#pragma omp task default(none) shared(cubeOffset, nextGridSize, field, totalTriangles)
+//#endif
+//    for (unsigned int i = 0; i < 8; ++i) {
     for (unsigned int i = 0; i < 8; ++i) {
 #ifndef DEBUG
 #pragma omp task default(none) firstprivate(i) shared(cubeOffset, nextGridSize, field, totalTriangles)
@@ -87,37 +145,3 @@ auto TreeMeshBuilder::isSurfaceInBlock(
 }
 
 
-float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
-    // NOTE: This method is called from "buildCube(...)"!
-
-    // 1. Store pointer to and number of 3D points in the field
-    //    (to avoid "data()" and "size()" call in the loop).
-    const Vec3_t<float> *pPoints = field.getPoints().data();
-    const auto count = unsigned(field.getPoints().size());
-
-    float value = std::numeric_limits<float>::max();
-
-    // 2. Find minimum square distance from points "pos" to any point in the
-    //    field.
-    for (unsigned i = 0; i < count; ++i) {
-        float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
-        distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);
-        distanceSquared += (pos.z - pPoints[i].z) * (pos.z - pPoints[i].z);
-
-        // Comparing squares instead of real distance to avoid unnecessary
-        // "sqrt"s in the loop.
-        value = std::min(value, distanceSquared);
-    }
-
-    // 3. Finally take square root of the minimal square distance to get the real distance
-    return sqrt(value);
-}
-
-void TreeMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) {
-    // NOTE: This method is called from "buildCube(...)"!
-
-    // Store generated triangle into vector (array) of generated triangles.
-    // The pointer to data in this array is return by "getTrianglesArray(...)" call
-    // after "marchCubes(...)" call ends.
-    mTriangles.push_back(triangle);
-}
