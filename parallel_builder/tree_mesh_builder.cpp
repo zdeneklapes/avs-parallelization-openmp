@@ -26,8 +26,8 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field) {
     // code and only when that works add OpenMP tasks to achieve parallelism.
     unsigned int totalTriangles = 0;
 #ifndef DEBUG
+//#pragma omp parallel default(none) shared(totalTriangles, field)
 #pragma omp parallel default(none) shared(totalTriangles, field)
-//#pragma omp parallel default(none) shared(totalTriangles, field) num_threads(8)
     {
 #pragma omp master
 //#pragma omp single nowait
