@@ -83,14 +83,16 @@ function pack() {
 
     ZIP_NAME="xlapes02.zip"
 
-    CMD="zip -jr '$ZIP_NAME' \
+    CMD="zip -r '$ZIP_NAME' \
         PMC-xlapes02.txt \
         parallel_builder/*.cpp \
         parallel_builder/*.h \
-        input_scaling_strong.png \
-        input_scaling_weak.png \
-        grid_scaling.png"
+        *.png"
 
+    # Copy png files from the newest folder inside tmp/backups
+    CMD2="cp \$(ls -td tmp/backups/*/ | head -n 1)build_evaluate/*.png ."
+
+    if [ $DEBUG -eq 1 ]; then echo "$CMD"; else eval "$CMD2"; fi
     if [ $DEBUG -eq 1 ]; then echo "$CMD"; else eval "$CMD"; fi
 }
 
