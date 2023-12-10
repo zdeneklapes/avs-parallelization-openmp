@@ -60,7 +60,7 @@ Pro správný součet všech počtů všech child vláken je nutné přidat #pra
 
 1) Stručně zhodnoťte efektivitu vytvořených řešení (na základě grafů ŠKÁLOVÁNÍ).
 
-Při použití větší mřížky se ukázalo, že řešení pomocí algoritmu octree je efektivnější. Loop varianta byla buď srovnatelná nebo trošku efektivnější než tree varianta při menších velikostech mřížky. Z grafu silného škálování je patrné, že v tree přístupu dochází při větším počtu vláken k stabilizaci času výpočtu pro většinu velikostí vstupu, zatímco v loop přístupu dochází k rapidnímu poklesu času výpočtu."
+Při použití větší mřížky se ukázalo, že řešení pomocí algoritmu octree je efektivnější. Loop varianta byla buď srovnatelná nebo trošku efektivnější než tree varianta při menších velikostech mřížky. Z grafu silného škálování je patrné, že v tree přístupu dochází při větším počtu vláken k stabilizaci času výpočtu pro většinu velikostí vstupu. Naopak v loop přístupu dochází k rapidnímu poklesu času výpočtu s přidáváním více výpočetních zdrojů, což naznačuje efektivní silné škálování v tomto případě.
 
 
 2) V jakém případě (v závislosti na počtu bodů ve vstupním souboru a velikosti 
@@ -92,8 +92,8 @@ Silné škálování se zaměřuje na měření výkonu při konstantním probl�
    všech jader? Na kolik procent se podařilo využít obě CPU?
    
    ref: 2.8% (0.998 out of 36 logical cores)
-   loop: 89.2% (32.095 out of 36 logical cores)
-   tree: 72.7% (26.186 out of 36 logical cores)
+   loop: 90.0% (32.400 out of 36 logical CPUs)
+   tree: 73.5% (26.472 out of 36 logical CPUs)
 
 3) Jaké jsou závěry z těchto měření?
 

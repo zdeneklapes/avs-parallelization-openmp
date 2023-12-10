@@ -14,6 +14,9 @@
 
 #include "tree_mesh_builder.h"
 
+#undef DEBUG
+#define OPTIMIZATION 2 // Why 1 is not working?
+
 TreeMeshBuilder::TreeMeshBuilder(unsigned gridEdgeSize)
         : BaseMeshBuilder(gridEdgeSize, "Octree") {
 
@@ -83,39 +86,40 @@ void TreeMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) 
     }
 }
 
-
 auto TreeMeshBuilder::decomposeCube(const Vec3_t<float> &cubeOffset,
                                     const unsigned int gridSize,
                                     const ParametricScalarField &field) -> unsigned int {
-    const auto edgeLen = float(gridSize);
-
-    if (isSurfaceInBlock(edgeLen, cubeOffset, field)) { return 0; }
-    if (gridSize <= GRID_CUT_OFF) { return buildCube(cubeOffset, field); }
-
     unsigned int totalTriangles = 0;
+#if OPTIMIZATION == 2
+    if (isSurfaceInBlock(float(gridSize), cubeOffset, field)) { return 0; }
+    if (gridSize <= GRID_CUT_OFF) { return buildCube(cubeOffset, field); }
+#endif
+
     const unsigned int nextGridSize = gridSize / 2;
 
-//#ifndef DEBUG
-//#pragma omp for
-//#endif
-//#ifndef DEBUG
-//#pragma omp task default(none) shared(cubeOffset, nextGridSize, field, totalTriangles)
-//#endif
-//    for (unsigned int i = 0; i < 8; ++i) {
     for (unsigned int i = 0; i < 8; ++i) {
+        const Vec3_t<float> nextCubeOffset(
+                cubeOffset.x + sc_vertexNormPos[i].x * float(nextGridSize),
+                cubeOffset.y + sc_vertexNormPos[i].y * float(nextGridSize),
+                cubeOffset.z + sc_vertexNormPos[i].z * float(nextGridSize)
+        );
+#if OPTIMIZATION == 1
+        if (isSurfaceInBlock(float(nextGridSize), nextCubeOffset, field)) { return 0; }
+        if (nextGridSize <= GRID_CUT_OFF) { return buildCube(nextCubeOffset, field); }
+#endif
 #ifndef DEBUG
-#pragma omp task default(none) firstprivate(i) shared(cubeOffset, nextGridSize, field, totalTriangles)
+#if OPTIMIZATION == 1
+#pragma omp task default(none) firstprivate(i, nextCubeOffset, nextGridSize) shared(cubeOffset, field, totalTriangles)
+#endif
+#if OPTIMIZATION == 2
+        //#pragma omp task default(none) firstprivate(i)  shared(cubeOffset, nextGridSize, field, totalTriangles)
+        //#pragma omp task default(none) firstprivate(i) shared(cubeOffset, nextGridSize, field, totalTriangles, nextCubeOffset)
+#pragma omp task default(none) firstprivate(i, nextCubeOffset, nextGridSize) shared(cubeOffset, field, totalTriangles)
+#endif
 #endif
         {
-            const Vec3_t<float> nextCubeOffset(
-                    cubeOffset.x + sc_vertexNormPos[i].x * float(nextGridSize),
-                    cubeOffset.y + sc_vertexNormPos[i].y * float(nextGridSize),
-                    cubeOffset.z + sc_vertexNormPos[i].z * float(nextGridSize)
-            );
             const unsigned int trianglesCount = decomposeCube(nextCubeOffset, nextGridSize, field);
-#ifndef DEBUG
 #pragma omp atomic update
-#endif
             totalTriangles += trianglesCount;
         }
     }

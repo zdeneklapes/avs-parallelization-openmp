@@ -130,6 +130,11 @@ function slurm_watch_squeue() {
     #    watch -n 1 "squeue --me -l"
 }
 
+function slurm_cancel_all() {
+    # Cancel all jobs
+    scancel --user=$USER
+}
+
 function slurm_sbatch() {
     # Submit jobs to slurm: vtune.sl and evaluate.sl
     # ENVIRONMENT VARIABLES:
@@ -208,12 +213,12 @@ function backup() {
             for i in "build_evaluate" "build_vtune" "build"; do
                 mkdir -p tmp/backups/${time}/${i}
             done
-#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/tmp_*" tmp/backups/${time}/build_evaluate/
-#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*.optrpt" tmp/backups/${time}/build_evaluate/
-#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/CMakeFiles/PMC.dir/*"
-#
-#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/vtune-*" tmp/backups/${time}/build_vtune/
-#            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/CMakeFiles/PMC.dir/*" tmp/backups/${time}/build_vtune/
+            #            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/tmp_*" tmp/backups/${time}/build_evaluate/
+            #            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*.optrpt" tmp/backups/${time}/build_evaluate/
+            #            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/CMakeFiles/PMC.dir/*"
+            #
+            #            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/vtune-*" tmp/backups/${time}/build_vtune/
+            #            rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/CMakeFiles/PMC.dir/*" tmp/backups/${time}/build_vtune/
 
             rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_evaluate/*" tmp/backups/${time}/build_evaluate/
             rsync -avz -e ssh "avs_barbora:\$(pwd)/repos/${CURRENT_DIR_NAME}/build_vtune/*" tmp/backups/${time}/build_vtune/
@@ -253,15 +258,53 @@ function check_mem_leaks() {
     valgrind ./build/PMC --level 0.15 --grid 8 --builder loop --threads 1 data/bun_zipper_res1.pts loop.obj
 }
 
-function t1() {
-    build_local_O3
-    GRID=32
-    ./build/PMC --level 0.15 --grid ${GRID} --builder ref --threads 0 data/bun_zipper_res1.pts tmp/ref.obj
-    ./build/PMC --level 0.15 --grid ${GRID} --builder loop --threads 0 data/bun_zipper_res1.pts tmp/loop.obj
-    ./build/PMC --level 0.15 --grid ${GRID} --builder tree --threads 0 data/bun_zipper_res1.pts tmp/tree.obj
-    python3 ./scripts/check_output.py tmp/ref.obj tmp/tree.obj
-    python3 ./scripts/check_output.py tmp/ref.obj tmp/loop.obj
-    python3 ./scripts/check_output.py tmp/loop.obj tmp/tree.obj
+function test() {
+    # Run PMC with different parameters
+    # ENVIRONMENT VARIABLES:
+    #   DEBUG: 1/0 if set to 1, only print commands, do not execute them
+    #   REF: 1/0 if set to 1, run reference implementation
+    #   LOOP: 1/0 if set to 1, run loop implementation
+    #   TREE: 1/0 if set to 1, run tree implementation
+    #   THREADS: number of threads to use
+    #   GRID: grid size
+
+
+    if [ -z "$DEBUG" ]; then DEBUG=0; fi
+    if [ -z "$REF" ]; then REF=0; fi
+    if [ -z "$LOOP" ]; then LOOP=0; fi
+    if [ -z "$TREE" ]; then TREE=0; fi
+    if [ -z "$THREADS" ]; then THREADS=0; fi
+    if [ -z "$GRID" ]; then GRID=32; fi
+
+    if [ $REF -eq 1 ]; then
+        echo "Running ref"
+        ./build/PMC --level 0.15 --grid ${GRID} --builder ref --threads ${THREADS} data/bun_zipper_res1.pts tmp/ref.obj
+    fi
+
+    if [ $LOOP -eq 1 ]; then
+        echo "Running loop"
+        ./build/PMC --level 0.15 --grid ${GRID} --builder loop --threads ${THREADS} data/bun_zipper_res1.pts tmp/loop.obj
+    fi
+
+    if [ $TREE -eq 1 ]; then
+        echo "Running tree"
+        ./build/PMC --level 0.15 --grid ${GRID} --builder tree --threads ${THREADS} data/bun_zipper_res1.pts tmp/tree.obj
+    fi
+
+    if [ $LOOP -eq 1 ]; then
+        echo "Running check ref vs tree"
+        python3 ./scripts/check_output.py tmp/ref.obj tmp/loop.obj
+    fi
+
+    if [ $TREE -eq 1 ]; then
+        echo "Running check ref vs loop"
+        python3 ./scripts/check_output.py tmp/ref.obj tmp/tree.obj
+    fi
+
+    if [ $LOOP -eq 1 ] && [ $TREE -eq 1 ]; then
+        echo "Running check loop vs tree"
+        python3 ./scripts/check_output.py tmp/loop.obj tmp/tree.obj
+    fi
 }
 
 function die() {
