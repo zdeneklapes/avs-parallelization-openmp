@@ -15,7 +15,7 @@
 #include "tree_mesh_builder.h"
 
 #undef DEBUG
-#define OPTIMIZATION 2 // Why 1 is not working?
+#define OPTIMIZATION 1 // Why 1 is not working?
 
 TreeMeshBuilder::TreeMeshBuilder(unsigned gridEdgeSize)
         : BaseMeshBuilder(gridEdgeSize, "Octree") {
@@ -107,15 +107,9 @@ auto TreeMeshBuilder::decomposeCube(const Vec3_t<float> &cubeOffset,
         if (isSurfaceInBlock(float(nextGridSize), nextCubeOffset, field)) { return 0; }
         if (nextGridSize <= GRID_CUT_OFF) { return buildCube(nextCubeOffset, field); }
 #endif
+
 #ifndef DEBUG
-#if OPTIMIZATION == 1
 #pragma omp task default(none) firstprivate(i, nextCubeOffset, nextGridSize) shared(cubeOffset, field, totalTriangles)
-#endif
-#if OPTIMIZATION == 2
-        //#pragma omp task default(none) firstprivate(i)  shared(cubeOffset, nextGridSize, field, totalTriangles)
-        //#pragma omp task default(none) firstprivate(i) shared(cubeOffset, nextGridSize, field, totalTriangles, nextCubeOffset)
-#pragma omp task default(none) firstprivate(i, nextCubeOffset, nextGridSize) shared(cubeOffset, field, totalTriangles)
-#endif
 #endif
         {
             const unsigned int trianglesCount = decomposeCube(nextCubeOffset, nextGridSize, field);
@@ -144,8 +138,8 @@ auto TreeMeshBuilder::isSurfaceInBlock(
     );
     auto block = evaluateFieldAt(midPoint, field);
     auto circle = mIsoLevel + sqrtf(3.F) / 2.F * resEdgeLength;
-    bool isBlockEmpty = block > circle;
-    return isBlockEmpty;
+    bool isInBlock = block > circle;
+    return isInBlock;
 }
 
 

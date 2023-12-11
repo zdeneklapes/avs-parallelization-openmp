@@ -96,6 +96,28 @@ function pack() {
     if [ $DEBUG -eq 1 ]; then echo "$CMD"; else eval "$CMD"; fi
 }
 
+function pack_jaros() {
+    # Clean and Zip project
+    # ENVIRONMENT VARIABLES:
+    #   DEBUG: 1/0 if set to 1, only print commands, do not execute them
+
+    # Check ENVIRONMENT VARIABLES
+    if [ -z "$DEBUG" ]; then DEBUG=0; fi
+
+    ZIP_NAME="xlapes02.zip"
+
+#    files=$(git ls-files)
+    files="$(git ls-files)"
+
+    # replace all new lines with space
+    files=$(echo ${files} | sed -E "s/\n/ /g")
+
+    CMD="zip -r ${ZIP_NAME} ${files}"
+
+#    echo "Zipping files"
+    if [ $DEBUG -eq 1 ]; then echo "${CMD}"; else eval "${CMD}"; fi
+}
+
 function test_fast() {
     # run clean
     DEBUG=0 clean
