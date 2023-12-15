@@ -17,7 +17,7 @@ Při testování a měření všech tří způsobů plánování (statické, dyn
 
 3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
 
-Pomocí #pragma omp critical v metodě LoopMeshBuilder::emitTriangle. Při ukládání z více vláken může dojít k vzájemnému vyloučení, a proto je tato pragma nesmírně důležitá k synchronizaci vláken při přístupu do kritické sekce.
+Pomocí #pragma omp critical v metodě LoopMeshBuilder::emitTriangle. Při ukládání z více vláken může dojít k vzájemnému vyloučení, a proto je tato pragma velmi důležitá k synchronizaci vláken při přístupu do kritické sekce.
 
 
 Úloha 2: Paralelní průchod stromem
@@ -41,7 +41,9 @@ Na konci metody TreeMeshBuilder::decomposeCube() je potřeba synchronizovat vše
 2) Jaký vliv má na vaše řešení tzv. "cut-off"? Je vhodné vytvářet nový 
    task pro každou krychli na nejnižší úrovni?
 
-Maximální délka hrany krychle na nejnižší úrovni byla zvolena jako 1. Pokud by hodnota cut-off byla větší než 1, došlo by k nepřesnému výpočtu, protože nebyly by vytvořeny všechny trojúhelníky. Na nejnižší úrovni již není vhodné vytvářet nový task, protože vše, co je potřeba, je získat součty trojúhelníků jednotlivých krychlí na této úrovni."
+Maximální délka hrany krychle na nejnižší úrovni byla zvolena jako 1. Pokud by hodnota cut-off byla větší než 1, došlo by k nepřesnému výpočtu, protože nebyly by vytvořeny všechny trojúhelníky. Na nejnižší úrovni již není vhodné vytvářet nový úkol (task), protože vše, co je potřeba, je získat součty trojúhelníků jednotlivých krychlí na této úrovni. Stejně tak funguje i varianta s cyklem, která projde všechny krychle na nejnižší úrovni a sečte jejich trojúhelníky.
+
+Vytváření nového úkolu pro každou krychli na nejnižší úrovni je velmi nevhodné, protože v tomto bodě již není potřeba dalšího dělení prostoru na další podsektory, a dochází pouze k generování trojúhelníků pomocí funkce "buildCube".
 
 3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
 
@@ -52,7 +54,7 @@ Mohou nastat tři situace:
 2. Když byla dosažena specifikovaná hloubka cut-off, funkce vrátí celkový počet trojúhelníků zavolaným způsobem v metodě buildCube.
 3. Když je krychle neprázdná a nedošlo k dosažení cut-off hloubky, do sdílené proměnné totalTrianglesCount se přičítají počty trojúhelníků rekurzivním voláním funkce TreeMeshBuilder::decomposeCube na nižších úrovních jednotlivých child vláken.
 
-Pro správný součet všech počtů všech child vláken je nutné přidat #pragma omp taskwait pro čekání na dokončení child tasků, které byly vygenerovány jejich rodičovským taskem."
+Pro správný součet všech počtů všech child vláken je nutné přidat #pragma omp taskwait pro čekání na dokončení child tasků, které byly vygenerovány jejich rodičovským taskem.
 
 
 Úloha 3: Grafy škálování všech řešení
@@ -71,12 +73,13 @@ Podle grafu škálování by k takovému případu došlo při malém vstupu ale
 3) Je (nebo není) stromový algoritmus efektivnější z pohledu slabého škálování 
    vzhledem ke vstupu?
 
-Ano je efektivnější.
+Stromový algoritmus není efektivní z hlediska slabého škálování vzhledem ke vstupu. Algoritmus má problém se škálováním při zvětšování vstupu.
 
 4) Jaký je rozdíl mezi silným a slabým škálováním?
 
-Silné škálování se zaměřuje na měření výkonu při konstantním problému s rostoucím počtem procesorů. Naopak slabé škálování se věnuje měření výkonu při rostoucím problému s konstantním počtem procesorů."
+Při silném škálování zůstává celkové množství práce (počet úkolů) konstantní, pričemž cílem je zvládnout tento problém v co nejkratším čase a pocet procesorů je variabilní.
 
+Při slabém škálování zůstává množství práce na každém výpočtovém jádru konstantní. S nárůstem počtu výpočtových zdrojů zůstává čas potřebný k vyřešení problému konstantní, přičemž cílem je zvládnout co největší problém za zachování tohoto konstantního času.
 
 Úloha 4: Analýza využití jader pomocí VTune
 ================================================================================
@@ -97,4 +100,4 @@ Silné škálování se zaměřuje na měření výkonu při konstantním probl�
 
 3) Jaké jsou závěry z těchto měření?
 
-Z měření vyplývá, že pro malý počet vláken je varianta algoritmu Marching Cubes implementovaná pomocí smyčky (loop) trochu efektivnější než varianta s použitím stromu (tree). Nicméně pro větší počet vláken je smyčka značně efektivnější než strom. Tento rozdíl lze přičítat dělení a vytváření jednotlivých úkolů, stejně jako rekurzivitě samotné, která se nachází v metodě TreeMeshBuilder::decomposeCube."
+Z měření vyplývá, že pro malý počet vláken je varianta algoritmu Marching Cubes implementovaná pomocí smyčky (loop) trochu efektivnější než varianta s použitím stromu (tree). Nicméně pro větší počet vláken je smyčka značně efektivnější než strom. Tento rozdíl lze přičítat dělení a vytváření jednotlivých úkolů, stejně jako rekurzivitě samotné, která se nachází v metodě TreeMeshBuilder::decomposeCube.

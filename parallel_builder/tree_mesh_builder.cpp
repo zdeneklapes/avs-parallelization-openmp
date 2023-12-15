@@ -15,7 +15,7 @@
 #include "tree_mesh_builder.h"
 
 #undef DEBUG
-#define OPTIMIZATION 1 // Why 1 is not working?
+#define OPTIMIZATION 2 // Why 1 is not working?
 
 TreeMeshBuilder::TreeMeshBuilder(unsigned gridEdgeSize)
         : BaseMeshBuilder(gridEdgeSize, "Octree") {
